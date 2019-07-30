@@ -1,0 +1,82 @@
+// TestPerformance.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//
+
+#include "pch.h"
+#include <iostream>
+#include <set>
+#include <map>
+#include <algorithm>
+
+struct EventHolder
+{
+	bool operator<(const EventHolder& other) const
+	{
+		return time_ < other.time_;
+	}
+	double time_;
+};
+
+struct EventHolderRegistry
+{
+	using EventHolderSet  = std::multiset<EventHolder>;
+	using KeyValueMap =std::map<std::string, EventHolderSet>;
+	KeyValueMap keyValueMap;
+	void Add(const std::string& key, EventHolder&& holder)
+	{
+		auto it = keyValueMap.find(key);
+		if (it == keyValueMap.end())
+		{
+			keyValueMap[key].emplace(std::move(holder));
+		}
+		else
+		{
+			//auto rangeIt = std::equal_range(it->second.begin(), it->second.end(), holder);
+			auto rangeIt = it->second.equal_range(holder);
+			//auto lb = it->second.lower_bound(holder);
+			//auto ub = it->second.lower_bound(holder);
+
+			//if (rangeIt.first == it->second.end())
+			if (rangeIt.first == it->second.end())
+			{
+				it->second.emplace(std::move(holder));
+			}
+			else
+			{
+				for (auto iter = rangeIt.first; iter != rangeIt.second; ++iter)
+				{
+					if (std::abs(iter->time_) - std::abs(holder.time_) < 0.01)
+					{
+						it->second.erase(iter);
+						it->second.emplace(std::move(holder));
+						break;
+					}
+				}
+			}
+		}
+	}
+};
+
+int main()
+{
+    std::cout << "Hello World!\n"; 
+	EventHolderRegistry eventHolderRegistry;
+
+	for (int i = 0; i < 100000; ++i)
+	{
+		EventHolder eventHolder;
+		eventHolder.time_ = i;
+		eventHolderRegistry.Add("w1", std::move(eventHolder));
+		eventHolderRegistry.Add("w1", std::move(eventHolder));
+	}
+}
+
+// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
+// Debug program: F5 or Debug > Start Debugging menu
+
+// Tips for Getting Started: 
+//   1. Use the Solution Explorer window to add/manage files
+//   2. Use the Team Explorer window to connect to source control
+//   3. Use the Output window to see build output and other messages
+//   4. Use the Error List window to view errors
+//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
+//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
